@@ -16,10 +16,15 @@ import pickle
 
 app = dash.Dash()
 
-# This ends up to be 75+ Mb file and can be created from ghcnm.ipynb at https://github.com/cliffwhitworth/environment_explorer
+# ghcnm.tavg.v3.3.0.20170710.qca.dat ends up to be 75+ Mb file and can be created from ghcnm.ipynb at https://github.com/cliffwhitworth/environment_explorer
 # Unable to upload to Github but has more data than the ghcnm_means.pkl file below
 # with open('./ghcnm.tavg.v3.3.0.20170710.qca.dat.pkl', 'rb') as qca_file:
 #     qca_temps = pickle.load(qca_file)
+
+with open('./global_means.pkl', 'rb') as global_means_file:
+    global_means = pickle.load(global_means_file)
+
+df = global_means[global_means['YEAR'] == 2014]
 
 # Able to upload to Github
 with open('./ghcnm_means.pkl', 'rb') as qca_file:
@@ -65,7 +70,11 @@ app.layout = html.Div([
     html.Div([
         html.H1('Global Historical Climatology Network-Monthly'),
         html.P('Compare low and high yearly average temperatures given the country'),
-        html.A('Code on Github', href='https://github.com/cliffwhitworth/environment_explorer')
+        html.A('Code on Github', href='https://github.com/cliffwhitworth/environment_explorer'),
+        html.Br(),
+        html.A('GHCNM site', href='https://www.ncdc.noaa.gov/ghcnm/v3.php'),
+        html.Br(),
+        html.A('Observing stations', href='https://www.wmo.int/cpdb/volume_a_observing_stations/list_stations')
     ]),
     html.Hr(),
     html.Div([
@@ -113,6 +122,42 @@ app.layout = html.Div([
                 {'name': 'Lo Year Average', 'x': np.arange(0, 12, 1), 'y': temps_min.iloc[:,2:14].values.flatten()},
                 {'name': 'Hi Year Average', 'x': np.arange(0, 12, 1), 'y': temps_max.iloc[:,2:14].values.flatten()}
             ]
+        }
+    ),
+    html.Hr(),
+    html.Div([
+        html.H1('Global Means')
+    ]),
+    html.Div([
+        html.H3('Select Year:'),
+        dcc.Dropdown(
+            id='global_year',
+            options=[{'label': i, 'value': i} for i in available_years],
+            value='2016'
+        )
+    ], style={'display':'inline-block', 'padding-right': '13px'}),
+    dcc.Graph(
+        id='my_graph2',
+        figure={
+            'data': [
+                dict(
+                    type = 'choropleth',
+                    colorscale = 'Rainbow',
+                    reversescale = True,
+                    locations = df['Country'],
+                    locationmode = "country names",
+                    z = df['YearAvg'],
+                    text = df['Country'],
+                    colorbar = {'title' : 'Global Means'},
+                  )
+            ],
+            'layout': {
+                'title':'Global Means',
+                'geo':dict(
+                    showframe = False,
+                    projection = {'type':'natural earth'}
+                )
+            }
         }
     )
 ], style={'padding': '0px', 'margin': '0px'})
@@ -172,6 +217,35 @@ def update_graph(n_clicks, cntrycode, loYear, hiYear):
             'xaxis': {'title': 'Month'},
             'yaxis': {'title': 'Hundredths degree celcius'}
             }
+    }
+    return fig
+
+@app.callback(
+    Output('my_graph2', 'figure'),
+    [Input('global_year', 'value')])
+def update_graph(value):
+    df = global_means[global_means['YEAR'] == value]
+
+    fig = {
+        'data': [
+            dict(
+                type = 'choropleth',
+                colorscale = 'Rainbow',
+                reversescale = True,
+                locations = df['Country'],
+                locationmode = "country names",
+                z = df['YearAvg'],
+                text = df['Country'],
+                colorbar = {'title' : 'Global Means'},
+              )
+        ],
+        'layout': {
+            'title':'Global Means',
+            'geo':dict(
+                showframe = False,
+                projection = {'type':'natural earth'}
+            )
+        }
     }
     return fig
 
